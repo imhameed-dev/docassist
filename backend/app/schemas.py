@@ -18,3 +18,13 @@ class DocumentOut(BaseModel):
     error_code: str | None
     error_message: str | None
     created_at: datetime
+
+
+class SearchResultOut(BaseModel):
+    """A retrieved passage with its source and relevance score."""
+
+    document_id: str
+    filename: str
+    page_number: int
+    text: str
+    score: float
