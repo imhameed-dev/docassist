@@ -21,7 +21,11 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_defaults() -> None:
     settings = IsolatedSettings()
     assert settings.environment == "development"
-    assert settings.database_url.startswith("sqlite:")
+    assert settings.database_url is None
+    assert settings.sqlalchemy_url.startswith("sqlite:///")
+    assert settings.sqlalchemy_url.endswith("app.db")
+    assert settings.max_upload_mb == 20
+    assert settings.uploads_dir == settings.data_dir / "uploads"
 
 
 def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -29,7 +33,7 @@ def test_environment_variables_override_defaults(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("DOCASSIST_DATABASE_URL", "postgresql+psycopg://u:p@localhost/db")
     settings = IsolatedSettings()
     assert settings.environment == "production"
-    assert settings.database_url == "postgresql+psycopg://u:p@localhost/db"
+    assert settings.sqlalchemy_url == "postgresql+psycopg://u:p@localhost/db"
 
 
 def test_env_file_is_read(tmp_path: Path) -> None:
@@ -42,6 +46,16 @@ def test_invalid_environment_is_rejected(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("DOCASSIST_ENVIRONMENT", "staging")
     with pytest.raises(ValidationError):
         IsolatedSettings()
+
+
+def test_upload_limits_must_be_positive(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DOCASSIST_MAX_UPLOAD_MB", "0")
+    with pytest.raises(ValidationError):
+        IsolatedSettings()
+
+
+def test_max_upload_bytes() -> None:
+    assert IsolatedSettings(max_upload_mb=2).max_upload_bytes == 2 * 1024 * 1024
 
 
 def test_get_settings_is_cached() -> None:

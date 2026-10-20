@@ -4,6 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # <repo>/backend/app/config.py -> <repo>. Resolving the .env path from this file (not the
@@ -22,9 +23,26 @@ class Settings(BaseSettings):
 
     app_name: str = "Private AI Document Assistant"
     environment: Literal["development", "test", "production"] = "development"
-    # Reserved for Stage 2 (document storage). Nothing reads it yet.
-    # SQLite is the default; a PostgreSQL URL can be supplied later without code changes.
-    database_url: str = "sqlite:///./data/app.db"
+    # Upload limits. Processing happens inside the upload request, so keep these modest.
+    max_upload_mb: int = Field(default=20, ge=1, le=200)
+    max_pages: int = Field(default=200, ge=1, le=5000)
+
+    # Where uploaded PDFs and the default SQLite database live (gitignored).
+    data_dir: Path = REPO_ROOT / "data"
+    # Optional override, e.g. a PostgreSQL URL. Defaults to SQLite inside data_dir.
+    database_url: str | None = None
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def uploads_dir(self) -> Path:
+        return self.data_dir / "uploads"
+
+    @property
+    def sqlalchemy_url(self) -> str:
+        return self.database_url or f"sqlite:///{self.data_dir / 'app.db'}"
 
 
 @lru_cache

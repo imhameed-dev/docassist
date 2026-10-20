@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 
 from app import __version__
+from app.api.documents import router as documents_router
 from app.config import Settings, get_settings
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
             version=__version__,
         )
 
+    app.include_router(documents_router)
     return app
 
 
