@@ -41,7 +41,11 @@ function describe(doc: DocumentSummary): string {
   return parts.join(" · ");
 }
 
-export default function Documents() {
+interface Props {
+  onDocumentsChange?: (documents: DocumentSummary[]) => void;
+}
+
+export default function Documents({ onDocumentsChange }: Props) {
   const [list, setList] = useState<ListState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -59,6 +63,12 @@ export default function Documents() {
       });
     return () => controller.abort();
   }, [attempt]);
+
+  useEffect(() => {
+    if (list.kind === "ready") {
+      onDocumentsChange?.(list.documents);
+    }
+  }, [list, onDocumentsChange]);
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget; // capture: currentTarget is cleared after an await

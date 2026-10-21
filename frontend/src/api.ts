@@ -117,3 +117,58 @@ export async function deleteDocument(id: string): Promise<void> {
   });
   if (!response.ok) throw await errorFromResponse(response);
 }
+
+export interface Citation {
+  document_id: string;
+  filename: string;
+  page_number: number;
+  excerpt: string;
+}
+
+export interface AnswerResult {
+  answer: string;
+  insufficient_evidence: boolean;
+  citations: Citation[];
+}
+
+function isCitation(value: unknown): value is Citation {
+  return (
+    isRecord(value) &&
+    typeof value.document_id === "string" &&
+    typeof value.filename === "string" &&
+    typeof value.page_number === "number" &&
+    typeof value.excerpt === "string"
+  );
+}
+
+function isAnswerResult(value: unknown): value is AnswerResult {
+  return (
+    isRecord(value) &&
+    typeof value.answer === "string" &&
+    typeof value.insufficient_evidence === "boolean" &&
+    Array.isArray(value.citations) &&
+    value.citations.every(isCitation)
+  );
+}
+
+export async function askQuestion(
+  question: string,
+  documentId?: string,
+): Promise<AnswerResult> {
+  const response = await fetch("/api/answer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question,
+      ...(documentId === undefined ? {} : { document_id: documentId }),
+    }),
+  });
+
+  if (!response.ok) throw await errorFromResponse(response);
+
+  const data: unknown = await response.json();
+  if (!isAnswerResult(data)) {
+    throw new Error("Backend returned an unexpected answer response");
+  }
+  return data;
+}
